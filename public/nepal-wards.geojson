@@ -1,0 +1,8 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    { "type": "Feature", "properties": { "id": "ward-3", "name": "Ward 3" }, "geometry": { "type": "Point", "coordinates": [85.6895, 27.9547] } },
+    { "type": "Feature", "properties": { "id": "ward-5", "name": "Ward 5" }, "geometry": { "type": "Point", "coordinates": [85.7117, 27.8883] } },
+    { "type": "Feature", "properties": { "id": "ward-7", "name": "Ward 7" }, "geometry": { "type": "Point", "coordinates": [85.5384, 27.6588] } }
+  ]
+}

@@ -1,0 +1,1 @@
+export { scoreWithMiniMax } from './gemini';

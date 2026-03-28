@@ -1,0 +1,123 @@
+{
+  "app_name": "Pahad",
+  "tagline": "Community Mental Health Screening",
+  "disclaimer": "Pahad is a decision-support tool. It does not diagnose mental health conditions. All data is used to support community health screening only.",
+  "login": {
+    "title": "Welcome to Pahad",
+    "subtitle": "Sign in to continue",
+    "email": "Email address",
+    "password": "Password",
+    "submit": "Sign in",
+    "google": "Sign in with Google",
+    "error": "Invalid credentials"
+  },
+  "nav": {
+    "home": "Home",
+    "new_visit": "New Visit",
+    "history": "History",
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "workers": "CHW Activity",
+    "logout": "Sign out"
+  },
+  "home": {
+    "greeting": "Good morning",
+    "visits_this_month": "Visits this month",
+    "assigned_households": "Assigned households",
+    "start_visit": "Start New Visit",
+    "recent_visits": "Recent visits"
+  },
+  "visit_form": {
+    "title": "New Household Visit",
+    "select_household": "Select household",
+    "visit_date": "Visit date",
+    "signals_header": "Observed Signals",
+    "notes_label": "Additional notes (optional)",
+    "notes_placeholder": "Describe any other observations...",
+    "submit": "Submit & Score",
+    "submitting": "Scoring...",
+    "syncing": "Syncing visit..."
+  },
+  "risk": {
+    "score": "Risk Score",
+    "level": "Risk Level",
+    "explanation": "What this means",
+    "key_signals": "Key observations",
+    "confidence": "AI confidence",
+    "scored_by_llm": "Scored by AI",
+    "scored_by_fallback": "Scored by standard weights",
+    "low": "Low",
+    "moderate": "Moderate",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "signals": {
+    "sleep": "Sleep changes",
+    "appetite": "Appetite changes",
+    "withdrawal": "Social withdrawal",
+    "trauma": "Recent loss or trauma",
+    "activities": "Stopped daily activities",
+    "hopelessness": "Expressed hopelessness",
+    "substance": "Alcohol/substance use increase",
+    "self_harm": "Self-harm indicators"
+  },
+  "responses": {
+    "0": "Not observed",
+    "1": "Mild / sometimes",
+    "2": "Significant / often",
+    "3": "Severe / persistent"
+  },
+  "supervisor": {
+    "total_screenings": "Total Screenings",
+    "flagged_households": "Flagged Households",
+    "active_chws": "Active CHWs",
+    "avg_risk": "Avg Area Risk",
+    "this_month": "this month",
+    "high_or_critical": "high or critical",
+    "at_least_one_visit": ">=1 visit this month"
+  },
+  "table": {
+    "household": "Household",
+    "area": "Area",
+    "risk_score": "Risk",
+    "last_visit": "Last Visit",
+    "chw": "CHW",
+    "status": "Status",
+    "action": "Action",
+    "mark_reviewed": "Mark Reviewed",
+    "mark_referred": "Mark Referred",
+    "view_details": "View Details"
+  },
+  "status": {
+    "active": "Active",
+    "reviewed": "Reviewed",
+    "referred": "Referred"
+  },
+  "trend": {
+    "improving": "Improving",
+    "stable": "Stable",
+    "worsening": "Worsening"
+  },
+  "empty": {
+    "chw_home": "Welcome! Start your first household visit.",
+    "visit_history": "No visits yet. Your completed visits will appear here.",
+    "supervisor_dashboard": "Waiting for CHW visit data. No screenings submitted yet.",
+    "flagged_table": "No high-risk households flagged. All clear.",
+    "workers": "No CHW activity recorded yet."
+  },
+  "errors": {
+    "network": "Network error. Please try again.",
+    "save_failed": "Failed to save visit. Your data is preserved.",
+    "score_fallback": "AI unavailable - score calculated using standard weights.",
+    "not_found": "Not found",
+    "back_home": "Back to Home"
+  },
+  "map": {
+    "title": "Risk Heatmap",
+    "subtitle": "Hover over an area to see details",
+    "households": "households",
+    "avg_score": "Avg score",
+    "legend_low": "Low",
+    "legend_critical": "Critical"
+  }
+}

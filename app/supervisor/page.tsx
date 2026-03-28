@@ -1,8 +1,22 @@
+import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui/Card';
 import { SummaryCards } from '@/components/dashboard/SummaryCards';
 import { FlaggedTable } from '@/components/dashboard/FlaggedTable';
 import { getDashboardData } from '@/lib/data';
-import NepalMap from '@/components/map/NepalMap';
+
+const NepalMap = dynamic(() => import('@/components/map/NepalMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900" style={{ minHeight: 480 }}>
+      <div className="grid h-[480px] place-items-center bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.15),_transparent_30%),linear-gradient(180deg,_#eff6ff_0%,_#ecfeff_45%,_#f8fafc_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.2),_transparent_30%),linear-gradient(180deg,_#0f172a_0%,_#111827_45%,_#020617_100%)]">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-brand/20 border-t-brand" />
+          <p className="mt-4 text-sm font-medium text-slate-600 dark:text-slate-300">Loading risk map...</p>
+        </div>
+      </div>
+    </div>
+  ),
+});
 
 export default async function SupervisorDashboardPage() {
   const { areas, households, visits, profiles } = await getDashboardData();

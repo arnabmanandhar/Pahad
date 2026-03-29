@@ -27,6 +27,8 @@ from .scoring import (
     RISK_BANDS,
     ConditionClassifier,
     classify_conditions,
+    SpecialistRouter,
+    route_specialist,
 )
 
 __all__ = [
@@ -49,4 +51,8 @@ __all__ = [
     "QUESTION_WEIGHTS",
     "MAX_RAW_SCORE",
     "RISK_BANDS",
+    "ConditionClassifier",
+    "classify_conditions",
+    "SpecialistRouter",
+    "route_specialist",
 ]

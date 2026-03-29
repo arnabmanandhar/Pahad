@@ -454,3 +454,279 @@ def classify_conditions(
         print(result["conditions"])  # ['depression', 'anxiety']
     """
     return _classifier.classify(q_scores, age, gender, age_bracket)
+
+
+# ============================================================================
+# PHASE 3: SPECIALIST ROUTING
+# ============================================================================
+# Age/sex-based decision trees for assigning appropriate specialists
+# Ensures community health workers route to correct referral pathway
+
+class SpecialistRouter:
+    """
+    Routes patients to appropriate specialists based on:
+    - Primary condition(s)
+    - Age and age bracket
+    - Gender
+    - Risk level
+    
+    Uses mhGAP and WHO guidelines for routing decisions.
+    Layer 3 of Pahad pipeline.
+    """
+    
+    def __init__(self):
+        # Specialist types available in Nepal FCHV context
+        self.specialists = {
+            # Psychiatry
+            "general_psychiatrist": "General psychiatrist",
+            "child_psychiatrist": "Child and adolescent psychiatrist",
+            "geriatric_psychiatrist": "Psychiatrist specializing in older adults",
+            
+            # Psychology
+            "clinical_psychologist": "Clinical psychologist",
+            "trauma_psychologist": "Psychologist specializing in trauma/PTSD",
+            "perinatal_psychologist": "Psychologist specializing in perinatal mental health",
+            
+            # Counseling
+            "mental_health_counselor": "Mental health counselor",
+            "addiction_counselor": "Addiction and substance abuse counselor",
+            "gbv_counselor": "Counselor trained in gender-based violence",
+            
+            # Primary Care
+            "general_practitioner": "General practitioner (for low-risk support)",
+            "mental_health_worker": "General mental health worker / nurse",
+        }
+    
+    def route_psychosis(self, age: int = None, age_bracket: str = None) -> str:
+        """
+        Route psychosis cases by age group.
+        Psychosis in youth requires specialist assessment urgently.
+        
+        mhGAP: ICD-11 6A20 (Schizophrenia) - specialist referral required
+        """
+        if not age and not age_bracket:
+            return "general_psychiatrist"  # Default when age unknown
+        
+        # Determine age bracket if not provided
+        if not age_bracket and age:
+            if age < 12:
+                age_bracket = "child"
+            elif age < 18:
+                age_bracket = "adolescent"
+            elif age < 65:
+                age_bracket = "adult"
+            else:
+                age_bracket = "older_adult"
+        
+        # Age-based routing for psychosis
+        if age_bracket == "child":
+            return "child_psychiatrist"  # Urgent pediatric psychiatric assessment
+        elif age_bracket == "adolescent":
+            return "child_psychiatrist"  # Adolescent psychiatrist
+        elif age_bracket == "older_adult":
+            return "geriatric_psychiatrist"  # Geriatric psychiatrist
+        else:
+            return "general_psychiatrist"  # Adult psychiatrist
+    
+    def route_ptsd(self, gender: str = None) -> str:
+        """
+        Route PTSD cases with gender considerations.
+        Females with PTSD may have gender-based violence history.
+        
+        mhGAP: ICD-11 6A40 (PTSD) - trauma-informed specialist required
+        """
+        if gender and gender.lower() in ["female", "f"]:
+            # Female with PTSD: GBV pathway + trauma specialist
+            return "trauma_psychologist"  # Trauma-informed specialist
+        
+        # Default: trauma-specialized mental health worker
+        return "trauma_psychologist"
+    
+    def route_depression(self, age: int = None, gender: str = None, 
+                        age_bracket: str = None, has_perinatal_modifier: bool = False) -> str:
+        """
+        Route depression cases with age and sex considerations.
+        Perinatal depression requires specialized perinatal mental health care.
+        Geriatric depression requires geriatric psychiatry assessment.
+        
+        mhGAP: ICD-11 6A70/6A71 (Major depressive disorder)
+        """
+        # Perinatal pathway: Females aged 13-49
+        if has_perinatal_modifier or (gender and gender.lower() in ["female", "f"] and 
+                                       age and 13 <= age <= 49):
+            return "perinatal_psychologist"  # Perinatal mental health specialist
+        
+        # Geriatric pathway: Age >= 65
+        if age_bracket == "older_adult" or (age and age >= 65):
+            return "geriatric_psychiatrist"  # Geriatric psychiatrist
+        
+        # Standard depression routing
+        return "general_psychiatrist"
+    
+    def route_anxiety(self) -> str:
+        """
+        Route anxiety cases to general mental health worker.
+        
+        mhGAP: ICD-11 6A80 (Generalized anxiety disorder)
+        Most anxiety cases manageable with counseling + CBT by trained mental health worker.
+        """
+        return "mental_health_counselor"
+    
+    def route_alcohol(self) -> str:
+        """
+        Route alcohol/substance use to addiction specialist.
+        
+        mhGAP: ICD-11 6C40 (Alcohol use disorder)
+        Requires addiction-trained specialist.
+        """
+        return "addiction_counselor"
+    
+    def route(
+        self,
+        conditions: list,
+        age: int = None,
+        gender: str = None,
+        age_bracket: str = None,
+        risk_score: int = None,
+        modifiers: list = None
+    ) -> Dict:
+        """
+        Route patient to appropriate specialist(s) based on:
+        - Primary and secondary conditions
+        - Demographic factors (age, gender)
+        - Risk level
+        - Clinical modifiers
+        
+        Args:
+            conditions: List of detected conditions (e.g., ['depression', 'anxiety'])
+            age: Patient age in years
+            gender: Patient gender (male/female/other)
+            age_bracket: Pre-computed age bracket (child/adolescent/adult/older_adult)
+            risk_score: Normalized risk score (0-100)
+            modifiers: List of clinical modifiers (e.g., ['perinatal_depression_risk'])
+        
+        Returns:
+            Dict with:
+                - primary_specialist: Main specialist for primary condition
+                - secondary_specialists: List of specialists for secondary conditions
+                - all_specialists: Combined list of all specialist types needed
+                - routing_rationale: Explanation of routing decisions
+                - urgency: immediate/urgent/normal based on risk
+        """
+        modifiers = modifiers or []
+        conditions = conditions or []
+        
+        routing_rationale = []
+        all_specialists = set()
+        
+        if not conditions:
+            return {
+                "primary_specialist": "general_practitioner",
+                "secondary_specialists": [],
+                "all_specialists": ["general_practitioner"],
+                "routing_rationale": ["No severe conditions detected - primary care follow-up"],
+                "urgency": "normal"
+            }
+        
+        # Determine urgency based on risk score and suicide risk
+        if risk_score and risk_score >= 76:
+            urgency = "immediate"
+        elif risk_score and risk_score >= 51:
+            urgency = "urgent"
+        else:
+            urgency = "normal"
+        
+        # Primary condition gets first priority in routing
+        primary_condition = conditions[0]
+        
+        # Route primary condition
+        if primary_condition == "psychosis":
+            primary_specialist = self.route_psychosis(age, age_bracket)
+            routing_rationale.append(f"Psychosis → {self.specialists[primary_specialist]} (age-based routing)")
+            all_specialists.add(primary_specialist)
+        
+        elif primary_condition == "ptsd":
+            primary_specialist = self.route_ptsd(gender)
+            routing_rationale.append(f"PTSD → {self.specialists[primary_specialist]} (trauma-informed)")
+            all_specialists.add(primary_specialist)
+        
+        elif primary_condition == "depression":
+            has_perinatal = "perinatal_depression_risk" in modifiers
+            primary_specialist = self.route_depression(age, gender, age_bracket, has_perinatal)
+            routing_rationale.append(f"Depression → {self.specialists[primary_specialist]}")
+            if has_perinatal:
+                routing_rationale[-1] += " (perinatal pathway)"
+            all_specialists.add(primary_specialist)
+        
+        elif primary_condition == "alcohol":
+            primary_specialist = self.route_alcohol()
+            routing_rationale.append(f"Alcohol/Substance use → {self.specialists[primary_specialist]}")
+            all_specialists.add(primary_specialist)
+        
+        elif primary_condition == "anxiety":
+            primary_specialist = self.route_anxiety()
+            routing_rationale.append(f"Anxiety → {self.specialists[primary_specialist]}")
+            all_specialists.add(primary_specialist)
+        
+        else:  # Unknown condition
+            primary_specialist = "general_psychiatrist"
+            routing_rationale.append(f"{primary_condition.title()} → Psychiatrist")
+            all_specialists.add(primary_specialist)
+        
+        # Route secondary conditions
+        secondary_specialists = []
+        for condition in conditions[1:]:
+            if condition == "psychosis":
+                specialist = self.route_psychosis(age, age_bracket)
+            elif condition == "ptsd":
+                specialist = self.route_ptsd(gender)
+            elif condition == "depression":
+                specialist = self.route_depression(age, gender, age_bracket)
+            elif condition == "alcohol":
+                specialist = self.route_alcohol()
+            elif condition == "anxiety":
+                specialist = self.route_anxiety()
+            else:
+                specialist = "general_psychiatrist"
+            
+            if specialist not in all_specialists:
+                secondary_specialists.append(specialist)
+                routing_rationale.append(f"Secondary: {condition.title()} → {self.specialists[specialist]}")
+                all_specialists.add(specialist)
+        
+        return {
+            "primary_specialist": primary_specialist,
+            "primary_condition": primary_condition,
+            "secondary_specialists": secondary_specialists,
+            "all_specialists": list(all_specialists),
+            "specialist_labels": {s: self.specialists.get(s, s) for s in all_specialists},
+            "routing_rationale": routing_rationale,
+            "urgency": urgency
+        }
+
+
+# Convenience functions for Phase 3
+_router = SpecialistRouter()
+
+def route_specialist(
+    conditions: list,
+    age: int = None,
+    gender: str = None,
+    age_bracket: str = None,
+    risk_score: int = None,
+    modifiers: list = None
+) -> Dict:
+    """
+    Route patient to appropriate specialist(s).
+    
+    Usage:
+        routing = route_specialist(
+            conditions=['depression', 'anxiety'],
+            age=30,
+            gender='female',
+            risk_score=45,
+            modifiers=['perinatal_depression_risk']
+        )
+        print(routing['primary_specialist'])  # perinatal_psychologist
+    """
+    return _router.route(conditions, age, gender, age_bracket, risk_score, modifiers)

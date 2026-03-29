@@ -76,8 +76,48 @@ class MentalHealthLLMPipeline:
             raise Exception(f"Ollama error: {response.text}")
     
     def _call_mock(self, system_prompt: str, user_message: str) -> str:
-        """Mock LLM for testing (returns template)"""
-        return "ENGLISH:\nMock response for testing.\n\nNEPALI:\nपरीक्षणको लागि मक नियन्त्रण प्रतिक्रिया।"
+        """Mock LLM for testing (returns properly formatted template)"""
+        return """ENGLISH:
+The person appears to be experiencing some emotional difficulty that would benefit from professional support.
+
+Conditions:
+The screening suggests possible mental health concerns that warrant further assessment by a trained professional.
+
+Recommended actions:
+- Maintain regular sleep schedule
+- Engage in daily physical activity
+- Stay socially connected
+
+Specialist:
+A mental health professional can provide comprehensive assessment and support.
+
+Next step for FCHV:
+Schedule a follow-up visit to provide emotional support and monitor the person's wellbeing.
+
+Optional questions:
+- How long have you been feeling this way?
+- Is there someone you trust to talk to?
+
+NEPALI:
+यो व्यक्तिलाई कुनै भावनात्मक कठिनाई भएको देखिन्छ र व्यावसायिक सहायता लाभकारी हुन सक्छ।
+
+अवस्था:
+स्क्रीनिङ्गले मानसिक स्वास्थ्य सम्बन्धी सम्भावित चिन्ता सुझाव दिन्छ जसको लागि प्रशिक्षित पेशेदारको अतिरिक्त मूल्यांकन आवश्यक छ।
+
+सुझाएको कार्य:
+- नियमित नींद अनुसूची राख्नुहोस्
+- दैनिक व्यायाम गर्नुहोस्
+- सामाजिक रूपमा जुर्छन
+
+विशेषज्ञ:
+एक मानसिक स्वास्थ्य पेशेदारले व्यापक मूल्यांकन र सहायता प्रदान गर्न सक्छ।
+
+FCHV को लागि अर्को कदम:
+अनुवर्ती भ्रमण गरेर भावनात्मक सहयोग प्रदान गर्नुहोस् र व्यक्तिको सुस्थता निगरानी गर्नुहोस्।
+
+वैकल्पिक प्रश्नहरू:
+- तपाई यो महसुस गर्दै कति समयदेखि हुनुहुन्छ?
+- तपाईसँग कुनै विश्वस्त व्यक्ति छ जससँग कुरा गर्न सक्नुहुन्छ?"""
     
     def _build_user_prompt(self, patient_data: PatientInput) -> str:
         """Build the user message for LLM"""

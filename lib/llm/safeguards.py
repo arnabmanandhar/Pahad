@@ -30,8 +30,9 @@ class SafeguardValidator:
         Check if output follows required format.
         Must contain: ENGLISH, NEPALI, conditions, recommendations, specialist, next step
         """
-        required_sections = ["ENGLISH:", "NEPALI:", "conditions", "specialist", "next step"]
-        missing = [s for s in required_sections if s not in text]
+        text_lower = text.lower()
+        required_sections = ["english:", "nepali:", "condition", "specialist", "next step"]
+        missing = [s for s in required_sections if s not in text_lower]
         
         if missing:
             return False, f"Missing required sections: {missing}"
@@ -124,7 +125,7 @@ class SafeguardValidator:
             results["errors"].append(msg)
         
         # Check 3: Bilingual
-        safe, msg = self.check_bilingual_output(output)
+        safe, msg = self.validate_bilingual_output(output)
         if not safe:
             results["is_safe"] = False
             results["errors"].append(msg)

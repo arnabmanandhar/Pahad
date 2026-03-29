@@ -213,3 +213,244 @@ def score_summary(q_responses: Dict[str, int]) -> Dict:
 def get_risk_band(score: int) -> str:
     """Map numeric score to band label."""
     return _scorer.get_risk_band(score)
+
+
+# ============================================================================
+# PHASE 2: CONDITION DETECTION
+# ============================================================================
+# ICD-11 aligned condition classification from raw q_scores
+# Implements mhGAP diagnostic thresholds with age/sex modifiers
+
+class ConditionClassifier:
+    """
+    Detects mental health conditions from q_scores using ICD-11 thresholds.
+    Layer 2.5 of pipeline (between scoring and specialist routing).
+    """
+    
+    def __init__(self):
+        # ICD-11 based thresholds for each condition
+        self.thresholds = {
+            "psychosis": {"Q8": 1},  # Psychosis signs
+            "depression": {
+                "core": ["Q4"],  # Hopelessness (core depression symptom)
+                "supporting": ["Q1", "Q2", "Q3"],  # Sleep, appetite, functional impairment
+                "min_supporting": 1,  # At least 1 supporting symptom needed
+            },
+            "ptsd": {
+                "trauma": "Q6",  # Trauma exposure required
+                "consequence": "Q7",  # Fear/flashbacks/avoidance required
+            },
+            "anxiety": {
+                "items": ["Q1", "Q3", "Q5"],  # Sleep disruption, functional, social withdrawal
+                "min_present": 2,
+            },
+            "alcohol": {
+                "primary": "Q9",  # Substance use increase
+                "escalation": "Q10",  # Family neglect due to substance
+            },
+            "suicide": {
+                "items": ["Q11", "Q12"],  # Self-harm or wish to die
+                "min_present": 1,
+            }
+        }
+    
+    def detect_psychosis(self, q_scores: Dict[str, int]) -> bool:
+        """
+        Detect psychosis: Q8 ≥ 1 (hearing voices, paranoia, confusion)
+        ICD-11: 6A20 (Schizophrenia) requires psychotic symptoms
+        """
+        return q_scores.get("Q8", 0) >= 1
+    
+    def detect_depression(self, q_scores: Dict[str, int], age: int = None, gender: str = None) -> bool:
+        """
+        Detect depression with ICD-11 criteria.
+        Requires: core symptom (Q4) + at least 1 supporting symptom
+        
+        ICD-11: 6A70 (Major depressive disorder, single episode)
+                6A71 (Major depressive disorder, recurrent)
+        
+        Age modifier: Geriatric depression (>65) may present differently
+        Gender modifier: Perinatal depression (females 13-49)
+        """
+        core_symptom = q_scores.get("Q4", 0) >= 1  # Hopelessness/worthlessness
+        supporting_items = [
+            q_scores.get("Q1", 0) >= 1,  # Sleep changes
+            q_scores.get("Q2", 0) >= 1,  # Appetite changes
+            q_scores.get("Q3", 0) >= 1,  # Stopped daily activities
+        ]
+        has_supporting = sum(supporting_items) >= 1
+        
+        return core_symptom and has_supporting
+    
+    def detect_ptsd(self, q_scores: Dict[str, int]) -> bool:
+        """
+        Detect PTSD: Requires both trauma exposure AND trauma consequences
+        
+        ICD-11: 6A40 (Post-traumatic stress disorder)
+        Requires: exposure to actual/threatened death, serious injury, sexual violence
+                  AND one of: re-experiencing, avoidance, sense of current threat
+        """
+        trauma_exposure = q_scores.get("Q6", 0) >= 1  # Recent trauma or loss
+        trauma_consequence = q_scores.get("Q7", 0) >= 1  # Fear/flashbacks/avoidance
+        
+        return trauma_exposure and trauma_consequence
+    
+    def detect_anxiety(self, q_scores: Dict[str, int]) -> bool:
+        """
+        Detect anxiety: Multiple items indicate worry/anxiety symptoms
+        
+        ICD-11: 6A80 (Generalized anxiety disorder)
+        Includes symptoms: worry, irritability, sleep disturbance, tension
+        """
+        anxiety_items = [
+            q_scores.get("Q1", 0) >= 1,  # Sleep disruption (anxiety symptom)
+            q_scores.get("Q3", 0) >= 1,  # Functional impairment
+            q_scores.get("Q5", 0) >= 1,  # Social withdrawal/worry
+        ]
+        # Anxiety detected if at least 2 relevant items present
+        return sum(anxiety_items) >= 2
+    
+    def detect_alcohol(self, q_scores: Dict[str, int]) -> bool:
+        """
+        Detect alcohol/substance use disorders.
+        
+        ICD-11: 6C40 (Alcohol use disorder)
+        Screening: Q9 (substance use increase) indicates active use problem
+        """
+        substance_use = q_scores.get("Q9", 0) >= 1  # Substance use increase
+        return substance_use
+    
+    def detect_suicide(self, q_scores: Dict[str, int]) -> bool:
+        """
+        Detect suicide risk (also covered by scoring overrides).
+        
+        Q11: Self-harm thoughts/behavior
+        Q12: Wish to die
+        """
+        return (q_scores.get("Q11", 0) >= 1 or q_scores.get("Q12", 0) >= 1)
+    
+    def classify(
+        self,
+        q_scores: Dict[str, int],
+        age: int = None,
+        gender: str = None,
+        age_bracket: str = None
+    ) -> Dict[str, any]:
+        """
+        Classify all conditions present based on q_scores.
+        
+        Args:
+            q_scores: Dict with Q1-Q12 responses
+            age: Patient age (for age-based modifiers)
+            gender: Patient gender (for gender-based modifiers)
+            age_bracket: Pre-computed age bracket (child/adolescent/adult/older_adult)
+        
+        Returns:
+            Dict with:
+                - conditions: List of detected conditions
+                - details: Detailed detection info for each condition
+                - modifiers: Applied age/sex modifiers
+                - has_suicide_risk: Boolean for immediate safety concern
+        """
+        conditions = []
+        details = {}
+        modifiers = []
+        
+        # Detect psychosis (highest priority)
+        if self.detect_psychosis(q_scores):
+            conditions.append("psychosis")
+            details["psychosis"] = {
+                "detected": True,
+                "q8_value": q_scores.get("Q8", 0),
+                "reason": "Hearing voices, paranoia, or confusion"
+            }
+        
+        # Detect PTSD (requires both trauma exposure AND consequence)
+        if self.detect_ptsd(q_scores):
+            conditions.append("ptsd")
+            details["ptsd"] = {
+                "detected": True,
+                "q6_value": q_scores.get("Q6", 0),
+                "q7_value": q_scores.get("Q7", 0),
+                "reason": "Trauma exposure with fear/flashbacks/avoidance"
+            }
+        
+        # Detect depression (core + supporting)
+        if self.detect_depression(q_scores, age, gender):
+            conditions.append("depression")
+            details["depression"] = {
+                "detected": True,
+                "q4_value": q_scores.get("Q4", 0),
+                "supporting": [q for q in ["Q1", "Q2", "Q3"] if q_scores.get(q, 0) >= 1],
+                "reason": "Hopelessness with sleep/appetite/functional changes"
+            }
+            
+            # Age/sex modifiers for depression
+            if gender and gender.lower() in ["female", "f"] and age and 13 <= age <= 49:
+                modifiers.append("perinatal_depression_risk")
+                details["depression"]["modifier"] = "perinatal_risk (females 13-49)"
+            
+            if age_bracket == "older_adult" or (age and age >= 65):
+                modifiers.append("geriatric_depression")
+                details["depression"]["modifier"] = f"geriatric_depression ({age or 'older_adult'})"
+        
+        # Detect anxiety (multiple items)
+        if self.detect_anxiety(q_scores):
+            conditions.append("anxiety")
+            details["anxiety"] = {
+                "detected": True,
+                "items_present": [q for q in ["Q1", "Q3", "Q5"] if q_scores.get(q, 0) >= 1],
+                "reason": "Sleep disruption + functional/social symptoms"
+            }
+        
+        # Detect alcohol use disorder
+        if self.detect_alcohol(q_scores):
+            conditions.append("alcohol")
+            details["alcohol"] = {
+                "detected": True,
+                "q9_value": q_scores.get("Q9", 0),
+                "q10_escalation": q_scores.get("Q10", 0) >= 1,
+                "reason": "Increased substance use"
+            }
+        
+        # Detect suicide risk (separate from conditions but critical)
+        has_suicide = self.detect_suicide(q_scores)
+        if has_suicide:
+            # Suicide is handled by scoring overrides, but add to details
+            details["suicide"] = {
+                "detected": True,
+                "q11_value": q_scores.get("Q11", 0),
+                "q12_value": q_scores.get("Q12", 0),
+                "reason": "Active suicidal or self-harm ideation"
+            }
+        
+        return {
+            "conditions": conditions,
+            "details": details,
+            "modifiers": modifiers,
+            "has_suicide_risk": has_suicide,
+            "primary_condition": conditions[0] if conditions else "no_severe_condition"
+        }
+
+
+# Convenience functions for Phase 2
+_classifier = ConditionClassifier()
+
+def classify_conditions(
+    q_scores: Dict[str, int],
+    age: int = None,
+    gender: str = None,
+    age_bracket: str = None
+) -> Dict:
+    """
+    Classify all mental health conditions from q_scores.
+    
+    Usage:
+        result = classify_conditions(
+            q_scores={"Q1": 1, "Q2": 0, ..., "Q12": 2},
+            age=35,
+            gender="female"
+        )
+        print(result["conditions"])  # ['depression', 'anxiety']
+    """
+    return _classifier.classify(q_scores, age, gender, age_bracket)

@@ -17,6 +17,17 @@ from .llm_pipeline import (
     create_pipeline,
     process_patient,
 )
+from .scoring import (
+    RiskScorer,
+    compute_score,
+    score_summary,
+    get_risk_band,
+    QUESTION_WEIGHTS,
+    MAX_RAW_SCORE,
+    RISK_BANDS,
+    ConditionClassifier,
+    classify_conditions,
+)
 
 __all__ = [
     "PatientInput",
@@ -31,4 +42,11 @@ __all__ = [
     "MentalHealthLLMPipeline",
     "create_pipeline",
     "process_patient",
+    "RiskScorer",
+    "compute_score",
+    "score_summary",
+    "get_risk_band",
+    "QUESTION_WEIGHTS",
+    "MAX_RAW_SCORE",
+    "RISK_BANDS",
 ]

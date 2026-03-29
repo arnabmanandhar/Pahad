@@ -29,6 +29,9 @@ from .scoring import (
     classify_conditions,
     SpecialistRouter,
     route_specialist,
+    WhoRecommendationLibrary,
+    get_recommendations,
+    get_all_recommendations,
 )
 
 __all__ = [
@@ -55,4 +58,7 @@ __all__ = [
     "classify_conditions",
     "SpecialistRouter",
     "route_specialist",
+    "WhoRecommendationLibrary",
+    "get_recommendations",
+    "get_all_recommendations",
 ]

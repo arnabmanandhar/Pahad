@@ -730,3 +730,342 @@ def route_specialist(
         print(routing['primary_specialist'])  # perinatal_psychologist
     """
     return _router.route(conditions, age, gender, age_bracket, risk_score, modifiers)
+
+
+# ============================================================================
+# PHASE 4: WHO RECOMMENDATION LIBRARY
+# ============================================================================
+# Condition × Severity → Specific, FCHV-actionable recommendations
+# Implements WHO mhGAP intervention guide for community health workers
+
+class WhoRecommendationLibrary:
+    """
+    Generates WHO-aligned recommendations based on condition and severity.
+    Layer 4 of Pahad pipeline.
+    
+    Severity levels:
+    - low (0-25): Mild symptoms, self-management focus
+    - moderate (26-50): Functional impairment, counseling focus
+    - high (51-75): Significant distress, urgent specialist referral
+    - critical (76-100): Safety risk, emergency intervention
+    """
+    
+    def __init__(self):
+        # Recommendations organized by: condition → severity → list of actions
+        self.recommendations = {
+            "depression": {
+                "low": [
+                    "Encourage regular sleep schedule (7-8 hours nightly)",
+                    "Support daily physical activity (30 min walking or exercise)",
+                    "Facilitate social activities and contact with friends/family",
+                    "Teach simple problem-solving techniques (break problems into small steps)",
+                    "Schedule follow-up visit in 2 weeks to monitor mood changes",
+                ],
+                "moderate": [
+                    "Counsel on sleep hygiene and routine daily activities",
+                    "Encourage engagement in meaningful activities and hobbies",
+                    "Help identify social support network (family, friends, community)",
+                    "Screen for suicide risk at each visit",
+                    "Refer to trained mental health counselor for talk therapy",
+                    "Encourage regular follow-up appointments (every 1-2 weeks)",
+                    "Teach relaxation techniques (breathing, progressive muscle relaxation)",
+                ],
+                "high": [
+                    "Immediate assessment for suicide/self-harm risk",
+                    "Urgent referral to psychiatrist or mental health specialist",
+                    "Coordinate with family to ensure safety and support",
+                    "If patient refuses treatment, document and notify supervisor",
+                    "Provide crisis contact information and emergency numbers",
+                    "Consider admission to mental health facility if high suicide risk",
+                    "Establish weekly follow-up appointments minimum",
+                ],
+                "critical": [
+                    "🚨 EMERGENCY: Immediate psychiatric evaluation required",
+                    "Contact mental health emergency line or nearest hospital",
+                    "Do NOT leave patient alone if suicide/self-harm risk present",
+                    "Involve family/trusted person for immediate support",
+                    "Document all risk factors and interventions taken",
+                    "Arrange immediate specialist/hospital referral",
+                    "If patient resistant: involve local health superior or police if safety risk",
+                ],
+            },
+            
+            "ptsd": {
+                "moderate": [
+                    "Provide trauma-informed care (avoid re-traumatization)",
+                    "Help identify safe spaces and people for support",
+                    "Teach grounding techniques for flashbacks (5-4-3-2-1 sensory method)",
+                    "Encourage breathing exercises when feeling triggered",
+                    "Gradually increase safe social activities",
+                    "Refer to trauma-specialized mental health counselor urgently",
+                    "Schedule follow-up weekly",
+                ],
+                "high": [
+                    "Urgent referral to trauma-specialized psychologist or psychiatrist",
+                    "Screen for suicide risk (PTSD increases risk)",
+                    "Assess safety from ongoing threat (domestic violence, conflict zone, etc)",
+                    "If domestic violence: provide resources and safety planning",
+                    "Encourage family participation in trauma recovery",
+                    "Activate community-based support structures",
+                    "Weekly FCHV follow-up with close monitoring",
+                ],
+                "critical": [
+                    "🚨 EMERGENCY if active suicidal ideation present",
+                    "Urgent specialist psychiatric evaluation",
+                    "If domestic violence/GBV: activate shelter/safe house resources",
+                    "Involve women's health worker or GBV counselor if female",
+                    "Immediate referral to psychologist with trauma specialization",
+                    "Daily FCHV monitoring until specialist care begins",
+                ],
+            },
+            
+            "anxiety": {
+                "low": [
+                    "Teach breathing exercises (4-4-4 box breathing technique)",
+                    "Encourage grounding in present moment awareness",
+                    "Promote regular physical activity and sleep routine",
+                    "Reduce caffeine and increase water intake",
+                    "Identify and write down worry thoughts to externalize them",
+                    "Schedule weekly check-ins to monitor progression",
+                ],
+                "moderate": [
+                    "Teach cognitive-behavioral techniques (thought challenging)",
+                    "Help identify anxiety triggers and avoidance patterns",
+                    "Practice relaxation techniques (progressive muscle relaxation, breathing)",
+                    "Gradual exposure to feared situations (with support)",
+                    "Refer to mental health counselor for ongoing support",
+                    "Encourage peer support and social connection",
+                    "Schedule follow-up every 2 weeks",
+                ],
+                "high": [
+                    "Assess for panic attacks or severe functional impairment",
+                    "Urgent referral to mental health counselor or psychologist",
+                    "If impacting work/family significantly: consider specialist evaluation",
+                    "Screen for depression (often co-occurs with severe anxiety)",
+                    "Teach coping strategies intensively",
+                    "Weekly follow-up with FCHV",
+                    "Consider temporary activity modification until specialist care starts",
+                ],
+                "critical": [
+                    "🚨 Anxiety at crisis levels - urgent specialist referral",
+                    "Assess for acute panic or psychotic features",
+                    "May require crisis intervention or temporary hospitalization",
+                    "Establish daily FCHV contact",
+                    "Coordinate with specialist for intensive treatment",
+                ],
+            },
+            
+            "psychosis": {
+                "moderate": [
+                    "Ensure patient safety (protect from harm based on beliefs/confusion)",
+                    "Minimize stress and overwhelming environments",
+                    "Reduce stimulation (noise, crowds) which can worsen symptoms",
+                    "Help maintain basic self-care (bathing, eating, sleeping)",
+                    "Involve family to support reality orientation (gently, not argumentatively)",
+                    "URGENT referral to psychiatrist (psychosis requires specialist)",
+                    "Monitor for command hallucinations or violent ideation",
+                    "Weekly FCHV follow-up minimum",
+                ],
+                "critical": [
+                    "🚨 EMERGENCY: Immediate psychiatric evaluation",
+                    "Assess immediate safety risk (self-harm, harm to others)",
+                    "If violent ideation: involve police/security and family immediately",
+                    "Do not argue about delusions - redirect to safety",
+                    "Contact mental health emergency services or hospital",
+                    "Possible admission to psychiatric ward for stabilization",
+                    "After admission: coordinate with family for ongoing support",
+                    "Ensure medication compliance monitoring (if prescribed)",
+                ],
+            },
+            
+            "alcohol": {
+                "moderate": [
+                    "Counsel on harmful drinking patterns and health risks",
+                    "Help establish realistic reduction goals (not necessarily abstinence)",
+                    "Identify triggers for heavy drinking (stress, social situations)",
+                    "Plan coping strategies for high-risk situations",
+                    "Engage family/household support for accountability",
+                    "Teach signs of alcohol poisoning and when to seek help",
+                    "Refer to addiction counselor or local support group (AA if available)",
+                    "Follow-up every 2 weeks for progress monitoring",
+                ],
+                "critical": [
+                    "🚨 Severe alcohol dependence - urgent specialist referral",
+                    "Assess withdrawal risk (seizures, delirium tremens)",
+                    "If daily heavy use: medical supervision may be needed for withdrawal",
+                    "Refer to addiction medicine specialist or rehab program",
+                    "If domestic violence related to drinking: activate safety protocols",
+                    "Screen for depression/anxiety (often underlying)",
+                    "Involve family in treatment planning",
+                    "Consider temporary structured environment (rehab/outpatient program)",
+                ],
+            },
+            
+            "no_severe_condition": {
+                "low": [
+                    "Continue regular health monitoring and self-care",
+                    "Promote stress management and healthy lifestyle",
+                    "Encourage social engagement and community participation",
+                    "Annual mental health screening check-in",
+                    "Provide psycho-education on mental health warning signs",
+                ]
+            }
+        }
+    
+    def get_severity_level(self, risk_score: int) -> str:
+        """
+        Convert numeric risk score to severity level for recommendation mapping.
+        
+        Args:
+            risk_score: 0-100 normalized risk score
+            
+        Returns:
+            Severity: 'low', 'moderate', 'high', or 'critical'
+        """
+        if risk_score < 26:
+            return "low"
+        elif risk_score < 51:
+            return "moderate"
+        elif risk_score < 76:
+            return "high"
+        else:
+            return "critical"
+    
+    def get_recommendations(
+        self,
+        condition: str,
+        severity: str = None,
+        risk_score: int = None
+    ) -> Dict:
+        """
+        Get WHO-aligned recommendations for specific condition and severity.
+        
+        Args:
+            condition: Primary condition detected (depression, ptsd, anxiety, alcohol, psychosis)
+            severity: Optional severity level (low/moderate/high/critical)
+                     If not provided, computed from risk_score
+            risk_score: Optional 0-100 risk score for auto-computing severity
+        
+        Returns:
+            Dict with:
+                - recommendations: List of specific, actionable recommendations
+                - severity: Applied severity level
+                - condition: Condition name
+                - next_steps: Next actions for FCHV
+        """
+        # Compute severity if not provided
+        if not severity and risk_score is not None:
+            severity = self.get_severity_level(risk_score)
+        else:
+            severity = severity or "low"  # Default to low if nothing provided
+        
+        # Get recommendations for this condition/severity combo
+        if condition in self.recommendations:
+            cond_recs = self.recommendations[condition]
+            
+            # For high/critical severity, use highest available level
+            if severity not in cond_recs:
+                # Graceful degradation: use next-lower available level
+                if severity == "critical" and "high" in cond_recs:
+                    severity = "high"
+                elif severity in ["high", "critical"] and "moderate" in cond_recs:
+                    severity = "moderate"
+            
+            recs_list = cond_recs.get(severity, cond_recs.get("low", []))
+        else:
+            # Unknown condition
+            recs_list = self.recommendations["no_severe_condition"]["low"]
+        
+        return {
+            "condition": condition,
+            "severity": severity,
+            "recommendations": recs_list,
+            "count": len(recs_list),
+            "next_steps": self._get_next_steps(condition, severity)
+        }
+    
+    def _get_next_steps(self, condition: str, severity: str) -> str:
+        """Generate concise next steps for FCHV action."""
+        if severity in ["critical", "high"]:
+            if condition == "psychosis":
+                return "IMMEDIATELY contact mental health emergency or take to hospital"
+            elif condition in ["ptsd", "depression", "alcohol"]:
+                return "Make urgent specialist referral TODAY"
+            else:
+                return "Refer to specialist urgently"
+        elif severity == "moderate":
+            return "Schedule specialist appointment this week"
+        else:
+            return "Schedule follow-up in 1-2 weeks; educate on warning signs"
+    
+    def get_all_recommendations(
+        self,
+        conditions: list,
+        risk_score: int = None
+    ) -> Dict:
+        """
+        Get recommendations for all detected conditions (primary + secondary).
+        
+        Args:
+            conditions: List of detected conditions
+            risk_score: Risk score for severity computation
+        
+        Returns:
+            Dict with combined recommendations for all conditions
+        """
+        severity = self.get_severity_level(risk_score) if risk_score is not None else "moderate"
+        
+        all_recs = {
+            "primary": None,
+            "secondary": [],
+            "combined": [],
+            "severity": severity,
+            "total_recommendations": 0
+        }
+        
+        if not conditions:
+            conditions = ["no_severe_condition"]
+        
+        # Get recommendations for primary condition
+        primary_rec = self.get_recommendations(conditions[0], risk_score=risk_score)
+        all_recs["primary"] = primary_rec
+        all_recs["combined"].extend(primary_rec["recommendations"])
+        
+        # Get recommendations for secondary conditions
+        for condition in conditions[1:]:
+            sec_rec = self.get_recommendations(condition, risk_score=risk_score)
+            all_recs["secondary"].append(sec_rec)
+            # Add secondary recs (but avoid duplicates)
+            for rec in sec_rec["recommendations"]:
+                if rec not in all_recs["combined"]:
+                    all_recs["combined"].append(rec)
+        
+        all_recs["total_recommendations"] = len(all_recs["combined"])
+        
+        return all_recs
+
+
+# Convenience functions for Phase 4
+_recommendation_lib = WhoRecommendationLibrary()
+
+def get_recommendations(
+    condition: str,
+    severity: str = None,
+    risk_score: int = None
+) -> Dict:
+    """
+    Get WHO-aligned recommendations for a condition.
+    
+    Usage:
+        recs = get_recommendations(
+            condition='depression',
+            risk_score=45
+        )
+        for rec in recs['recommendations']:
+            print(f"• {rec}")
+    """
+    return _recommendation_lib.get_recommendations(condition, severity, risk_score)
+
+def get_all_recommendations(conditions: list, risk_score: int = None) -> Dict:
+    """Get combined recommendations for all conditions detected."""
+    return _recommendation_lib.get_all_recommendations(conditions, risk_score)

@@ -2,7 +2,7 @@
 LLM Pipeline module for mhGAP-aligned mental health assessment
 """
 
-from .models import PatientInput, ScreeningResponse
+from .models import PatientInput, ScreeningResponse, ComprehensiveScreeningResponse
 from .prompts import (
     SYSTEM_PROMPT,
     TASK_PROMPT,
@@ -37,6 +37,7 @@ from .scoring import (
 __all__ = [
     "PatientInput",
     "ScreeningResponse",
+    "ComprehensiveScreeningResponse",
     "SYSTEM_PROMPT",
     "TASK_PROMPT",
     "get_system_prompt",

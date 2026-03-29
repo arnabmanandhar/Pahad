@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { RECOMMENDED_ACTION_COPY } from '@/lib/constants';
 import { ScoreResponse, Visit } from '@/lib/supabase/types';
 import { Card } from '@/components/ui/Card';
 import { RiskBadge } from '@/components/ui/Badge';
@@ -8,6 +9,8 @@ import { RiskBadge } from '@/components/ui/Badge';
 export function RiskExplanation({ visit, lang }: { visit: Visit | ScoreResponse; lang: 'en' | 'ne' }) {
   const [animatedScore, setAnimatedScore] = useState(0);
   const target = 'total_score' in visit ? visit.total_score : visit.score;
+  const recommendedAction = visit.recommended_action ?? 'monitor';
+  const actionCopy = RECOMMENDED_ACTION_COPY[recommendedAction];
 
   useEffect(() => {
     let raf = 0;
@@ -22,9 +25,7 @@ export function RiskExplanation({ visit, lang }: { visit: Visit | ScoreResponse;
     return () => cancelAnimationFrame(raf);
   }, [target]);
 
-  const explanation = useMemo(() => {
-    return lang === 'ne' ? visit.explanation_ne : visit.explanation_en;
-  }, [lang, visit]);
+  const explanation = useMemo(() => (lang === 'ne' ? visit.explanation_ne : visit.explanation_en), [lang, visit]);
 
   return (
     <Card className="border-2 border-brand/20 bg-gradient-to-br from-white to-brand-soft/40 dark:from-slate-900 dark:to-slate-800">
@@ -39,10 +40,11 @@ export function RiskExplanation({ visit, lang }: { visit: Visit | ScoreResponse;
             <RiskBadge level={visit.risk_level} size="lg" language={lang} />
           </div>
         </div>
-        <div className="rounded-2xl bg-white/70 p-4 dark:bg-slate-950/50">
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Confidence</p>
-          <p className="mt-1 text-2xl font-semibold text-ink dark:text-white">{visit.confidence}%</p>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{'scoring_method' in visit && visit.scoring_method === 'llm' ? 'AI-assisted explanation' : 'Standard weighted explanation'}</p>
+        <div className="rounded-2xl bg-white/70 p-4 dark:bg-slate-950/50 md:max-w-xs">
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Recommended next step</p>
+          <p className="mt-1 text-xl font-semibold text-ink dark:text-white">{lang === 'ne' ? actionCopy.label_ne : actionCopy.label_en}</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{lang === 'ne' ? actionCopy.detail_ne : actionCopy.detail_en}</p>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{'scoring_method' in visit && visit.scoring_method === 'llm' ? 'AI-assisted explanation' : 'WHO mhGAP weighted screening logic'}</p>
         </div>
       </div>
       {(visit.key_signals ?? []).length ? (

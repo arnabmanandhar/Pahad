@@ -12,7 +12,12 @@ interface Props {
   onChange: (value: 0 | 1 | 2 | 3) => void;
 }
 
-const optionClasses = ['border-slate-200 bg-slate-50 text-slate-600', 'border-amber-300 bg-amber-50 text-amber-800', 'border-orange-300 bg-orange-50 text-orange-800', 'border-red-300 bg-red-50 text-red-800'];
+const optionClasses = [
+  'border-slate-200 bg-slate-50 text-slate-600',
+  'border-amber-300 bg-amber-50 text-amber-800',
+  'border-orange-300 bg-orange-50 text-orange-800',
+  'border-red-300 bg-red-50 text-red-800',
+];
 
 export function SignalCard({ signalKey, value, onChange }: Props) {
   const { lang } = useI18n();
@@ -23,8 +28,14 @@ export function SignalCard({ signalKey, value, onChange }: Props) {
     <Card className={clsx('transition', value >= 2 && 'shadow-[0_0_0_1px_rgba(249,115,22,0.25),0_24px_36px_-28px_rgba(249,115,22,0.85)]')}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-ink dark:text-white">{lang === 'ne' ? signal.label_ne : signal.label_en}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">Weight {signal.weight}</p>
+          <p className="font-semibold text-ink dark:text-white">{lang === 'ne' ? signal.question_ne : signal.question_en}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+            <span>{lang === 'ne' ? signal.label_ne : signal.label_en}</span>
+            <span>Weight {signal.weight}</span>
+            {(signal.key === 'self_harm' || signal.key === 'wish_to_die') ? (
+              <span className="rounded-full bg-red-100 px-2 py-1 font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300">Critical override</span>
+            ) : null}
+          </div>
         </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">

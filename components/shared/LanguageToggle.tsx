@@ -13,7 +13,7 @@ export function LanguageToggle() {
         EN
       </button>
       <button type="button" onClick={() => setLang('ne')} className={`rounded-full px-3 py-1 text-sm font-medium ${lang === 'ne' ? 'bg-brand text-white' : 'text-slate-600 dark:text-slate-300'}`}>
-        ??
+        ने
       </button>
     </div>
   );

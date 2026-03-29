@@ -3,6 +3,7 @@ export type HouseholdStatus = 'active' | 'reviewed' | 'referred';
 export type RiskTrend = 'improving' | 'stable' | 'worsening';
 export type UserRole = 'chw' | 'supervisor';
 export type ScoringMethod = 'llm' | 'fallback';
+export type RecommendedAction = 'monitor' | 'refer_health_post' | 'urgent_escalation';
 
 export interface Area {
   id: string;
@@ -44,12 +45,16 @@ export interface Household {
 export interface SignalResponses {
   sleep: 0 | 1 | 2 | 3;
   appetite: 0 | 1 | 2 | 3;
-  withdrawal: 0 | 1 | 2 | 3;
-  trauma: 0 | 1 | 2 | 3;
   activities: 0 | 1 | 2 | 3;
   hopelessness: 0 | 1 | 2 | 3;
+  withdrawal: 0 | 1 | 2 | 3;
+  trauma: 0 | 1 | 2 | 3;
+  fear: 0 | 1 | 2 | 3;
+  psychosis: 0 | 1 | 2 | 3;
   substance: 0 | 1 | 2 | 3;
+  family_neglect: 0 | 1 | 2 | 3;
   self_harm: 0 | 1 | 2 | 3;
+  wish_to_die: 0 | 1 | 2 | 3;
 }
 
 export interface Visit {
@@ -64,6 +69,7 @@ export interface Visit {
   explanation_en: string | null;
   explanation_ne: string | null;
   key_signals: string[] | null;
+  recommended_action?: RecommendedAction | null;
   notes: string | null;
   scoring_method: ScoringMethod;
   created_at: string;
@@ -79,6 +85,7 @@ export interface ScoreResponse {
   key_signals: string[];
   confidence: number;
   scoring_method: ScoringMethod;
+  recommended_action: RecommendedAction;
 }
 
 export interface Database {

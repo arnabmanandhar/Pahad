@@ -35,21 +35,21 @@ export default async function SupervisorDashboardPage() {
   const last24HoursFlags = visits.filter((visit) => ['high', 'critical'].includes(visit.risk_level) && Date.now() - new Date(visit.created_at).getTime() <= 24 * 60 * 60 * 1000).length;
 
   const summaryItems = [
-    { label: 'Total Screenings', value: visits.length, caption: 'this month' },
-    { label: 'Flagged Households', value: households.filter((household) => ['high', 'critical'].includes(household.latest_risk_level)).length, caption: 'high or critical' },
-    { label: 'Active CHWs', value: profiles.filter((profile) => profile.role === 'chw').length, caption: 'at least one visit' },
-    { label: 'Avg Area Risk', value: Math.round(areaRiskData.reduce((sum, area) => sum + area.avgScore, 0) / Math.max(1, areaRiskData.length)), caption: 'across wards' },
+    { label: 'Total household screenings', value: visits.length, caption: 'recorded screening visits' },
+    { label: 'Flagged households', value: households.filter((household) => ['high', 'critical'].includes(household.latest_risk_level)).length, caption: 'need close follow-up or referral' },
+    { label: 'Active FCHVs', value: profiles.filter((profile) => profile.role === 'chw').length, caption: 'submitting community observations' },
+    { label: 'Average district risk', value: Math.round(areaRiskData.reduce((sum, area) => sum + area.avgScore, 0) / Math.max(1, areaRiskData.length)), caption: 'weighted from household screenings' },
   ];
 
   return (
     <div className="space-y-6">
       <Card className="bg-gradient-to-r from-slate-950 via-brand-dark to-brand text-white">
-        <p className="text-sm uppercase tracking-[0.25em] text-white/60">Live supervisor pulse</p>
+        <p className="text-sm uppercase tracking-[0.25em] text-white/60">Supervisor pulse</p>
         <div className="mt-3 flex flex-wrap items-center gap-4">
-          <h1 className="text-3xl font-semibold">Risk heatmap command center</h1>
+          <h1 className="text-3xl font-semibold">District mental health early warning dashboard</h1>
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium">
             <span className="h-2.5 w-2.5 rounded-full bg-red-400 animate-pulse" />
-            {last24HoursFlags} new flags in the last 24 hours
+            {last24HoursFlags} new high-risk flags in the last 24 hours
           </div>
         </div>
       </Card>
@@ -58,7 +58,8 @@ export default async function SupervisorDashboardPage() {
         <div className="space-y-6">
           <NepalMap areaRiskData={areaRiskData} />
           <Card>
-            <h3 className="text-lg font-semibold text-ink dark:text-white">Area risk over the last 4 weeks</h3>
+            <h3 className="text-lg font-semibold text-ink dark:text-white">District risk snapshot over the last 4 weeks</h3>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">A simple demo trend view showing where repeated FCHV screenings are surfacing sustained distress.</p>
             <div className="mt-6 grid gap-3">
               {areaRiskData.map((item) => (
                 <div key={item.area.id} className="space-y-2">

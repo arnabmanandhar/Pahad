@@ -1,0 +1,23 @@
+# LLM Pipeline Requirements
+# Install these packages to run the pipeline
+
+# Core dependencies
+pydantic>=2.0.0           # Data validation
+fastapi>=0.100.0         # Web framework
+uvicorn>=0.23.0          # ASGI server
+
+# LLM provider options (install based on your choice)
+# For OpenAI API:
+# openai>=1.0.0
+
+# For Ollama (local LLM):
+# requests>=2.31.0
+
+# For local transformer models:
+# transformers>=4.30.0
+# torch>=2.0.0
+
+# Optional but recommended
+python-dotenv>=1.0.0     # Environment configuration
+pytest>=7.0.0            # Testing
+pytest-asyncio>=0.21.0   # Async testing

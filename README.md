@@ -1,4 +1,4 @@
-# Pahad - Setup
+# Saveika - Setup
 
 ## Prerequisites
 - Node.js 18+
